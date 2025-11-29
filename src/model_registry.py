@@ -205,6 +205,45 @@ class ModelRegistry:
     def from_dict(cls, data: Dict[str, Any]) -> 'ModelRegistry':
         """Create a ModelRegistry from a dictionary."""
         registry = cls()
-        # Implementation would deserialize the data and populate the registry
-        # This is a simplified version
+        
+        # Deserialize models and versions
+        for model_name, versions_dict in data.get("models", {}).items():
+            for version_str, model_data in versions_dict.items():
+                # Create ModelShard objects
+                shards = []
+                for shard_data in model_data.get("shards", []):
+                    shard = ModelShard(
+                        shard_id=shard_data["shard_id"],
+                        worker_id=shard_data["worker_id"],
+                        status=ModelStatus[shard_data["status"]],
+                        load=shard_data["load"],
+                        metadata=shard_data.get("metadata", {})
+                    )
+                    shards.append(shard)
+                
+                # Create ModelVersion
+                model_version = ModelVersion(
+                    version=model_data["version"],
+                    model_path=model_data["model_path"],
+                    input_schema=model_data["input_schema"],
+                    output_schema=model_data["output_schema"],
+                    batch_size=model_data.get("batch_size", 1),
+                    max_batch_size=model_data.get("max_batch_size", 32),
+                    quantized=model_data.get("quantized", False),
+                    shards=shards,
+                    metadata=model_data.get("metadata", {})
+                )
+                
+                # Add to registry
+                if model_name not in registry._models:
+                    registry._models[model_name] = {}
+                registry._models[model_name][version_str] = model_version
+                
+                # Update worker models mapping
+                for shard in shards:
+                    worker_id = shard.worker_id
+                    if worker_id not in registry._worker_models:
+                        registry._worker_models[worker_id] = set()
+                    registry._worker_models[worker_id].add((model_name, version_str))
+        
         return registry
