@@ -15,7 +15,8 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.worker import Worker, ModelConfig
+from src.worker import Worker
+from src.config import ModelConfig
 
 async def run_worker(worker_id: str, host: str, port: int):
     """Run the worker with an interactive command-line interface."""

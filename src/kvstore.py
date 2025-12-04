@@ -10,7 +10,6 @@ import json
 from typing import Any, Dict, List, Optional, Tuple, TypeVar, Generic
 from dataclasses import dataclass
 from collections import OrderedDict
-import numpy as np
 
 T = TypeVar('T')
 

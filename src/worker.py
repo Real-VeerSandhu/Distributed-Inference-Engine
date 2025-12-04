@@ -11,8 +11,9 @@ import logging
 import time
 import signal
 import psutil
-from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
+
+from src.config import ModelConfig
 
 # Set up logging
 logging.basicConfig(
@@ -20,16 +21,6 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
-@dataclass
-class ModelConfig:
-    """Configuration for a model."""
-    model_name: str
-    model_path: str
-    batch_size: int = 1
-    max_batch_size: int = 32
-    input_schema: Optional[Dict[str, Any]] = None
-    output_schema: Optional[Dict[str, Any]] = None
 
 class FakeModel:
     """A fake model that simulates inference with configurable latency."""
