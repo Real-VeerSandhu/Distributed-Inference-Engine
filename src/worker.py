@@ -14,6 +14,7 @@ import psutil
 from typing import Any, Dict, List, Optional, Tuple
 
 from src.config import ModelConfig
+from src.mock_models import FakeModel
 
 # Set up logging
 logging.basicConfig(
@@ -21,49 +22,6 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
-class FakeModel:
-    """A fake model that simulates inference with configurable latency."""
-    
-    def __init__(self, config: ModelConfig):
-        """Initialize the fake model."""
-        self.config = config
-        self.model_name = config.model_name
-        self.batch_size = config.batch_size
-        self.max_batch_size = config.max_batch_size
-        self.input_schema = config.input_schema or {}
-        self.output_schema = config.output_schema or {}
-        
-        # Track metrics
-        self.request_count = 0
-        self.error_count = 0
-        self.total_latency = 0.0
-
-    async def predict(self, inputs: Any) -> Dict[str, Any]:
-        """Simulate model inference with configurable latency."""
-        start_time = time.time()
-        self.request_count += 1
-        
-        try:
-            # Simulate processing time (50-150ms)
-            await asyncio.sleep(0.05 + (time.time() % 0.1))
-            
-            # For now, just echo back the input with some metadata
-            result = {
-                "model": self.model_name,
-                "output": inputs,
-                "metadata": {
-                    "batch_size": len(inputs) if isinstance(inputs, (list, tuple)) else 1,
-                    "timestamp": time.time()
-                }
-            }
-            
-            return result
-        except Exception as e:
-            self.error_count += 1
-            raise
-        finally:
-            self.total_latency += (time.time() - start_time)
 
 class Worker:
     """Worker that loads models and handles inference requests."""
@@ -228,26 +186,26 @@ class Worker:
     def get_metrics(self) -> Dict[str, Any]:
         """Get current worker metrics."""
         process = psutil.Process()
-        mem_info = process.memory_info()
+        memory_info = process.memory_info()
         
-        model_metrics = {}
-        for name, model in self.models.items():
-            avg_latency = (model.total_latency / model.request_count) * 1000 if model.request_count > 0 else 0
-            model_metrics[name] = {
-                "request_count": model.request_count,
-                "error_count": model.error_count,
-                "avg_latency_ms": avg_latency
-            }
+        # Get model-specific metrics
+        model_metrics = {
+            model_name: model.get_metrics()
+            for model_name, model in self.models.items()
+        }
         
         return {
             "worker_id": self.worker_id,
-            "uptime_seconds": time.time() - self._start_time,
-            "total_requests": self._request_count,
-            "total_errors": self._error_count,
-            "models_loaded": list(self.models.keys()),
-            "memory_usage_mb": mem_info.rss / (1024 * 1024),
-            "cpu_percent": psutil.cpu_percent(),
-            "models": model_metrics
+            "start_time": self._start_time,
+            "uptime": time.time() - self._start_time,
+            "request_count": self._request_count,
+            "error_count": self._error_count,
+            "loaded_models": list(self.models.keys()),
+            "model_metrics": model_metrics,
+            "memory_usage_mb": memory_info.rss / (1024 * 1024),
+            "cpu_percent": process.cpu_percent(),
+            "thread_count": process.num_threads(),
+            "connections": len(process.connections())
         }
 
 async def main():

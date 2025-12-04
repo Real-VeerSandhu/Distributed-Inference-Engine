@@ -1,14 +1,15 @@
 import asyncio
 import sys
-import time
 import logging
+import time
 from pathlib import Path
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any
 
 # Add parent directory to path to import the batcher module
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.batcher import Batcher
+from src.mock_models import mock_batch_inference
 
 # Configure logging
 logging.basicConfig(
@@ -17,52 +18,6 @@ logging.basicConfig(
     stream=sys.stdout
 )
 logger = logging.getLogger("batcher_demo")
-
-
-
-async def mock_batch_inference(model_name: str, version: str, inputs: List[Any]) -> List[Dict[str, Any]]:
-    """Mock batch inference function that simulates processing a batch of inputs.
-    
-    Args:
-        model_name: Name of the model to use for inference
-        version: Version of the model
-        inputs: List of inputs to process
-        
-    Returns:
-        List of processed results, one for each input
-    """
-    start_time = time.time()
-    batch_size = len(inputs)
-    logger.info(f"Processing batch of {batch_size} requests with {model_name}:{version}")
-    
-    # Simulate processing time
-    await asyncio.sleep(0.1)
-    
-    results = []
-    for i, inp in enumerate(inputs):
-        # Simulate occasional failures (1 in 20 requests)
-        if i % 20 == 0 and i > 0:
-            results.append({
-                "model": model_name,
-                "version": version,
-                "input": inp,
-                "output": None,
-                "error": "Simulated processing error",
-                "timestamp": time.time()
-            })
-        else:
-            results.append({
-                "model": model_name,
-                "version": version,
-                "input": inp,
-                "output": f"processed_{inp}",
-                "timestamp": time.time()
-            })
-    
-    total_time = (time.time() - start_time) * 1000
-    logger.info(f"Processed batch of {batch_size} in {total_time:.2f}ms")
-    
-    return results
 
 
 async def demonstrate_batching() -> None:
@@ -139,7 +94,7 @@ async def demonstrate_batching() -> None:
         print(f"  Total Requests: {stats['total_requests']}")
         print(f"  Total Batched Requests: {stats['total_batched_requests']}")
         print(f"  Average Batch Size: {stats['avg_batch_size']:.2f}")
-        print(f"  Pending Batches: {stats['pending_batches']}")
+        print(f"  Pending Batches: {stats['pending_batches_count']}")
         print(f"  Pending Requests: {stats['pending_requests']}")
         
     except Exception as e:
