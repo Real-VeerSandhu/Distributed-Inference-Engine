@@ -1,9 +1,5 @@
 # Router vs Load Balancer
 
-This document explains the differences between the Router and Load Balancer components in the Distributed Inference Engine.
-
-## Overview
-
 Both the Router and Load Balancer are responsible for request distribution, but they serve different purposes and operate at different levels of the system.
 
 ## Router
@@ -78,13 +74,3 @@ shard = router.route_request(
 worker = await load_balancer.get_worker()
 # Send request to worker
 ```
-
-## Summary Table
-
-| Feature               | Router                          | Load Balancer                     |
-|-----------------------|---------------------------------|-----------------------------------|
-| **Primary Goal**      | Consistent request routing      | Even load distribution            |
-| **Key Mechanism**     | Hash-based sharding            | Various balancing strategies      |
-| **State Management**  | Tracks model/shard assignments  | Tracks worker health/load         |
-| **Failure Handling**  | Fails over to backup shards     | Removes unhealthy workers         |
-| **Best For**          | Stateful, sharded workloads    | Stateless, horizontally scalable  |
