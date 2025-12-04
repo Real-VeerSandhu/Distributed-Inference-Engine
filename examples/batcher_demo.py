@@ -56,13 +56,18 @@ async def demonstrate_batching():
         await asyncio.sleep(0.05)
     
     print("\nWaiting for all requests to complete...")
+    print("(Last batch will flush after max_latency expires)")
     
-    results = []
-    for i, future in futures:
-        result = await future
-        results.append((i, result))
-        elapsed = (time.time() - start_time) * 1000
-        print(f"Request {i} completed at {elapsed:.2f}ms")
+    results = await asyncio.gather(*[future for _, future in futures], return_exceptions=True)
+    
+    for i, (idx, result) in enumerate(zip(range(12), results)):
+        if isinstance(result, Exception):
+            print(f"Request {idx} error: {result}")
+        else:
+            elapsed = (time.time() - start_time) * 1000
+            print(f"Request {idx} completed at {elapsed:.2f}ms")
+    
+    results = [(i, r) for i, (_, r) in enumerate(zip(range(12), results)) if not isinstance(r, Exception)]
     
     print("\nResults:")
     for i, result in sorted(results):

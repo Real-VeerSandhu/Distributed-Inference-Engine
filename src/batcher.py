@@ -63,16 +63,19 @@ class Batcher:
     async def stop(self) -> None:
         self._running = False
         
-        for task in self._flush_tasks.values():
-            if not task.done():
-                task.cancel()
-                try:
-                    await task
-                except asyncio.CancelledError:
-                    pass
-        
-        for batch_key, batch in list(self._batches.items()):
-            await self._flush_batch(batch_key, batch)
+        for batch_key in list(self._batches.keys()):
+            batch = self._batches[batch_key]
+            if batch_key in self._flush_tasks:
+                task = self._flush_tasks[batch_key]
+                if not task.done():
+                    task.cancel()
+                    try:
+                        await task
+                    except asyncio.CancelledError:
+                        pass
+            
+            if batch.requests:
+                await self._flush_batch(batch_key, batch)
         
         logger.info("Batcher stopped")
     
@@ -126,11 +129,15 @@ class Batcher:
         try:
             await asyncio.sleep(batch.max_latency)
             
-            if batch_key in self._batches and self._batches[batch_key] is batch:
-                if batch.requests:
-                    await self._flush_batch(batch_key, batch)
+            if batch_key in self._batches:
+                current_batch = self._batches[batch_key]
+                if current_batch.requests:
+                    await self._flush_batch(batch_key, current_batch)
         except asyncio.CancelledError:
-            pass
+            if batch_key in self._batches:
+                current_batch = self._batches[batch_key]
+                if current_batch.requests:
+                    await self._flush_batch(batch_key, current_batch)
         except Exception as e:
             logger.error(f"Error in scheduled flush: {e}")
     
@@ -186,6 +193,12 @@ class Batcher:
             for req in requests_to_process:
                 if not req.future.done():
                     req.future.set_exception(e)
+    
+    async def flush_all(self) -> None:
+        for batch_key in list(self._batches.keys()):
+            batch = self._batches[batch_key]
+            if batch.requests:
+                await self._flush_batch(batch_key, batch)
     
     def get_stats(self) -> Dict[str, Any]:
         avg_batch_size = (
